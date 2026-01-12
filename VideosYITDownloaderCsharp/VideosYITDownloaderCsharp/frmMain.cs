@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.NetworkInformation;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -60,37 +62,33 @@ namespace VideosYITDownloaderCsharp
             }
         }
 
-        private async void btnVideo_Click(object sender, EventArgs e)
-        {
-            await StartQueue(DownloadFormat.VideoOnlyMp4);
-        }
-
-        private async void btnAudio_Click(object sender, EventArgs e)
-        {
-            await StartQueue(DownloadFormat.Mp3);
-        }
-
-        private async void btnVideoAudio_Click(object sender, EventArgs e)
-        {
-            await StartQueue(DownloadFormat.Mp4Full);
-        }
-
-        private async void btnPlayList_Click(object sender, EventArgs e)
-        {
-            await StartQueue(DownloadFormat.PlaylistMp4);
-        }
-
-        private void btnClearLog_Click(object sender, EventArgs e)
-        {
-            listLog.Items.Clear();
-        }
+        private async void btnVideo_Click(object sender, EventArgs e) => await StartQueue(DownloadFormat.VideoOnlyMp4);
+        private async void btnAudio_Click(object sender, EventArgs e) => await StartQueue(DownloadFormat.Mp3);
+        private async void btnVideoAudio_Click(object sender, EventArgs e) => await StartQueue(DownloadFormat.Mp4Full);
+        private async void btnPlayList_Click(object sender, EventArgs e) => await StartQueue(DownloadFormat.PlaylistMp4);
+        private void btnClearLog_Click(object sender, EventArgs e) => listLog.Items.Clear();
 
         private async Task StartQueue(DownloadFormat format)
         {
-            var urls = ParseUrls();
+            var urls = ParseUrlsWithValidation(out var rejectedReasons);
             if (urls.Count == 0)
             {
-                MessageBox.Show("Informe pelo menos uma URL (uma por linha).");
+                var msgEmpty = rejectedReasons.Any()
+                    ? "Nenhuma URL válida. Verifique o(s) motivo(s) no log."
+                    : "Informe pelo menos uma URL (uma por linha).";
+                MessageBox.Show(msgEmpty);
+                foreach (var rej in rejectedReasons) AppendLog(rej);
+                return;
+            }
+
+            // Loga URLs rejeitadas, se houver
+            foreach (var rej in rejectedReasons) AppendLog(rej);
+
+            // Checa conectividade antes da fila
+            if (!HasInternetConnectivity())
+            {
+                MessageBox.Show("Sem conexão de rede. Verifique sua conexão e tente novamente.", "Offline", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                AppendLog("Conexão ausente. Fila cancelada.");
                 return;
             }
 
@@ -180,10 +178,78 @@ namespace VideosYITDownloaderCsharp
                 if (!string.IsNullOrWhiteSpace(result.StdErr))
                 {
                     AppendLog("stderr: " + result.StdErr);
-                    // Se o stderr tiver mensagem mais clara, usamos no resumo
                     lastError = result.StdErr;
                 }
                 return (false, lastError);
+            }
+        }
+
+        /// <summary>
+        /// Valida URLs suportadas (YouTube/TikTok/Instagram) e retorna lista válida + motivos rejeitados.
+        /// </summary>
+        private List<string> ParseUrlsWithValidation(out List<string> rejectedReasons)
+        {
+            rejectedReasons = new List<string>();
+            var raw = textBox1.Text
+                .Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(u => u.Trim())
+                .Where(u => !string.IsNullOrWhiteSpace(u))
+                .Distinct();
+
+            var valid = new List<string>();
+            foreach (var url in raw)
+            {
+                if (IsSupportedUrl(url, out var reason))
+                    valid.Add(url);
+                else
+                    rejectedReasons.Add($"URL ignorada: {url} | Motivo: {reason}");
+            }
+            return valid;
+        }
+
+        /// <summary>
+        /// Verifica se a URL é bem formada e pertence a domínios suportados.
+        /// </summary>
+        private bool IsSupportedUrl(string url, out string reason)
+        {
+            reason = "";
+            if (!Uri.IsWellFormedUriString(url, UriKind.Absolute))
+            {
+                reason = "URL inválida";
+                return false;
+            }
+
+            if (!Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            {
+                reason = "URL inválida";
+                return false;
+            }
+
+            // Domínios suportados
+            var host = uri.Host.ToLowerInvariant();
+            var ok = host.Contains("youtube.com") || host.Contains("youtu.be") ||
+                     host.Contains("tiktok.com") || host.Contains("instagram.com");
+            if (!ok)
+            {
+                reason = "Domínio não suportado (suporta: YouTube, TikTok, Instagram).";
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Checagem simples de conectividade (DNS para 8.8.8.8).
+        /// </summary>
+        private bool HasInternetConnectivity()
+        {
+            try
+            {
+                return new Ping().Send("8.8.8.8", 1500) is PingReply r && r.Status == IPStatus.Success;
+            }
+            catch
+            {
+                return false;
             }
         }
 

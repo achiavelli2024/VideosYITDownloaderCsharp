@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -128,14 +129,12 @@ namespace VideosYITDownloaderCsharp.Services
                     };
                 }
 
-                var msg = $"yt-dlp retornou código {exitCode}";
-                if (stderr.Count > 0)
-                    msg += " | stderr: " + string.Join(" | ", stderr);
-
+                // Erro: mostra primeiro stderr se houver
+                var friendly = BuildFriendlyError(stderr, exitCode);
                 return new DownloadResult
                 {
                     Success = false,
-                    Message = msg,
+                    Message = friendly,
                     ExitCode = exitCode,
                     StdOut = string.Join(Environment.NewLine, stdout),
                     StdErr = string.Join(Environment.NewLine, stderr)
@@ -194,14 +193,12 @@ namespace VideosYITDownloaderCsharp.Services
 
         private string BuildVideoOnlyFormat(string quality)
         {
-            // Prioriza vídeo avc1/mp4, respeitando altura se fornecida (ex.: 1080p -> height<=1080)
             var heightClause = TryParseHeight(quality) is int h ? $"[height<={h}]" : "";
             return $"bv*[vcodec^=avc1][ext=mp4]{heightClause}/bv*[ext=mp4]{heightClause}/bestvideo";
         }
 
         private string BuildVideoAudioFormat(string quality)
         {
-            // Vídeo + áudio, priorizando avc1 + m4a, respeitando altura quando informada
             var heightClause = TryParseHeight(quality) is int h ? $"[height<={h}]" : "";
             return $"bv*[vcodec^=avc1][ext=mp4]{heightClause}+ba[ext=m4a]/bv*{heightClause}+ba/best[ext=mp4]/best";
         }
@@ -281,6 +278,13 @@ namespace VideosYITDownloaderCsharp.Services
             {
                 _logger.Warn("StripAudio falhou: " + ex.Message);
             }
+        }
+
+        private string BuildFriendlyError(List<string> stderr, int exitCode)
+        {
+            if (stderr == null || stderr.Count == 0) return $"yt-dlp retornou código {exitCode}";
+            var first = stderr.First().Trim();
+            return $"yt-dlp retornou código {exitCode}: {first}";
         }
     }
 }
