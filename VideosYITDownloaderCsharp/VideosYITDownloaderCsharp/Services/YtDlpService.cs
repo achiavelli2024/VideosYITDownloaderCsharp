@@ -22,8 +22,8 @@ namespace VideosYITDownloaderCsharp.Services
         public string Url { get; set; } = "";
         public DownloadFormat Format { get; set; }
         public string OutputDirectory { get; set; } = "";
-        /// <summary>Ex.: "bestvideo+bestaudio/best" (default) ou "720p".</summary>
-        public string Quality { get; set; } = "bestvideo+bestaudio/best";
+        /// <summary>Ex.: "best", "1080p", "720p", "480p", "360p".</summary>
+        public string Quality { get; set; } = "best";
     }
 
     internal class DownloadResult
@@ -66,11 +66,9 @@ namespace VideosYITDownloaderCsharp.Services
             IProgress<DownloadProgressInfo> progress,
             CancellationToken cancellationToken)
         {
-            // Licença / trial
             if (!LicenseManager.CanDownloadNow(out var reason))
                 return new DownloadResult { Success = false, Message = reason };
 
-            // Binários
             if (!File.Exists(_ytDlpPath))
                 return new DownloadResult { Success = false, Message = "yt-dlp.exe não encontrado em Tools." };
             if (!File.Exists(_ffmpegPath))
@@ -108,7 +106,6 @@ namespace VideosYITDownloaderCsharp.Services
 
                 if (exitCode == 0)
                 {
-                    // Pós-processo específico do modo A: remover áudio do MP4 final
                     if (request.Format == DownloadFormat.VideoOnlyMp4)
                     {
                         var dest = TryGetLastDestination(stdout);
@@ -131,7 +128,6 @@ namespace VideosYITDownloaderCsharp.Services
                     };
                 }
 
-                // Erro
                 var msg = $"yt-dlp retornou código {exitCode}";
                 if (stderr.Count > 0)
                     msg += " | stderr: " + string.Join(" | ", stderr);
@@ -156,18 +152,14 @@ namespace VideosYITDownloaderCsharp.Services
             }
         }
 
-        // Monta a linha de comando conforme o modo
         private string BuildArguments(DownloadRequest req, string outputDir)
         {
-            // Template fixo por modo
             string outputTemplate = req.Format == DownloadFormat.Mp3
                 ? Path.Combine(outputDir, "%(title)s.mp3")
                 : Path.Combine(outputDir, "%(title)s.mp4");
 
-            // Base: ffmpeg + saída; sem --ffprobe-location (deprecated)
             var args = $"--ffmpeg-location \"{_ffmpegPath}\" -o \"{outputTemplate}\" --restrict-filenames --newline --no-part --no-cache-dir";
 
-            // Playlist on/off
             if (req.Format == DownloadFormat.PlaylistMp4)
                 args += " --yes-playlist";
             else
@@ -176,28 +168,23 @@ namespace VideosYITDownloaderCsharp.Services
             switch (req.Format)
             {
                 case DownloadFormat.VideoOnlyMp4:
-                    // Modo A: somente vídeo, usando client android para evitar SABR/PO token.
-                    // Força somente vídeo (avc1/mp4), recode para mp4 e remove áudio depois.
                     args += " --extractor-args \"youtube:player_client=android\"";
-                    args += " -S vcodec:avc1,res,codec:mp4 -f \"bv*[vcodec^=avc1][ext=mp4]/bv*[ext=mp4]/bestvideo\" --merge-output-format mp4 --recode-video mp4";
+                    args += $" -S vcodec:avc1,res,codec:mp4 -f \"{BuildVideoOnlyFormat(req.Quality)}\" --merge-output-format mp4 --recode-video mp4";
                     break;
 
                 case DownloadFormat.Mp3:
-                    // Áudio MP3
                     args += " --extractor-args \"youtube:player_client=android\"";
                     args += " -f bestaudio/best --extract-audio --audio-format mp3 --audio-quality 0";
                     break;
 
                 case DownloadFormat.Mp4Full:
-                    // Vídeo + áudio (1 vídeo)
                     args += " --extractor-args \"youtube:player_client=android\"";
-                    args += " -S vcodec:avc1,res,codec:mp4 -f \"bv*[vcodec^=avc1][ext=mp4]+ba[ext=m4a]/bv*+ba/best[ext=mp4]/best\" --merge-output-format mp4 --recode-video mp4";
+                    args += $" -S vcodec:avc1,res,codec:mp4 -f \"{BuildVideoAudioFormat(req.Quality)}\" --merge-output-format mp4 --recode-video mp4";
                     break;
 
                 case DownloadFormat.PlaylistMp4:
-                    // Playlist vídeo + áudio
                     args += " --extractor-args \"youtube:player_client=android\"";
-                    args += " -S vcodec:avc1,res,codec:mp4 -f \"bv*[vcodec^=avc1][ext=mp4]+ba[ext=m4a]/bv*+ba/best[ext=mp4]/best\" --merge-output-format mp4 --recode-video mp4";
+                    args += $" -S vcodec:avc1,res,codec:mp4 -f \"{BuildVideoAudioFormat(req.Quality)}\" --merge-output-format mp4 --recode-video mp4";
                     break;
             }
 
@@ -205,7 +192,32 @@ namespace VideosYITDownloaderCsharp.Services
             return args;
         }
 
-        // Progresso a partir do stdout do yt-dlp
+        private string BuildVideoOnlyFormat(string quality)
+        {
+            // Prioriza vídeo avc1/mp4, respeitando altura se fornecida (ex.: 1080p -> height<=1080)
+            var heightClause = TryParseHeight(quality) is int h ? $"[height<={h}]" : "";
+            return $"bv*[vcodec^=avc1][ext=mp4]{heightClause}/bv*[ext=mp4]{heightClause}/bestvideo";
+        }
+
+        private string BuildVideoAudioFormat(string quality)
+        {
+            // Vídeo + áudio, priorizando avc1 + m4a, respeitando altura quando informada
+            var heightClause = TryParseHeight(quality) is int h ? $"[height<={h}]" : "";
+            return $"bv*[vcodec^=avc1][ext=mp4]{heightClause}+ba[ext=m4a]/bv*{heightClause}+ba/best[ext=mp4]/best";
+        }
+
+        private int? TryParseHeight(string quality)
+        {
+            if (string.IsNullOrWhiteSpace(quality)) return null;
+            if (quality.Equals("best", StringComparison.OrdinalIgnoreCase)) return null;
+            if (quality.EndsWith("p", StringComparison.OrdinalIgnoreCase))
+            {
+                var num = quality.Substring(0, quality.Length - 1);
+                if (int.TryParse(num, out var h)) return h;
+            }
+            return null;
+        }
+
         private void HandleOutput(string line, IProgress<DownloadProgressInfo> progress)
         {
             if (string.IsNullOrWhiteSpace(line)) return;
@@ -221,7 +233,6 @@ namespace VideosYITDownloaderCsharp.Services
             }
         }
 
-        // Encontra o último “Destination: ...” no stdout para pós-processo do modo A
         private string TryGetLastDestination(List<string> stdoutLines)
         {
             for (int i = stdoutLines.Count - 1; i >= 0; i--)
@@ -238,7 +249,6 @@ namespace VideosYITDownloaderCsharp.Services
             return null;
         }
 
-        // Remove trilha de áudio do arquivo final (modo A)
         private void StripAudio(string filePath)
         {
             try
@@ -246,7 +256,6 @@ namespace VideosYITDownloaderCsharp.Services
                 var dir = Path.GetDirectoryName(filePath) ?? AppDomain.CurrentDomain.BaseDirectory;
                 var tmp = Path.Combine(dir, Path.GetFileNameWithoutExtension(filePath) + ".noaudio.tmp.mp4");
 
-                // ffmpeg -c:v copy -an
                 var psi = $" -y -i \"{filePath}\" -c:v copy -an \"{tmp}\"";
                 _logger.Info($"ffmpeg strip audio: {_ffmpegPath} {psi}");
 

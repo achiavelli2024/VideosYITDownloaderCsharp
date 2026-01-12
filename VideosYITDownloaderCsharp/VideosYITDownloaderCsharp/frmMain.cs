@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -41,26 +43,10 @@ namespace VideosYITDownloaderCsharp
 
             lblLicenseStatus.Text = status;
             AppendLog(status);
-        }
 
-        private async void btnVideo_Click(object sender, EventArgs e)
-        {
-            await StartDownload(DownloadFormat.VideoOnlyMp4, quality: "bestvideo[ext=mp4]/bestvideo", isPlaylist: false);
-        }
-
-        private async void btnAudio_Click(object sender, EventArgs e)
-        {
-            await StartDownload(DownloadFormat.Mp3, quality: "bestaudio", isPlaylist: false);
-        }
-
-        private async void btnVideoAudio_Click(object sender, EventArgs e)
-        {
-            await StartDownload(DownloadFormat.Mp4Full, quality: "bestvideo+bestaudio/best", isPlaylist: false);
-        }
-
-        private async void btnPlayList_Click(object sender, EventArgs e)
-        {
-            await StartDownload(DownloadFormat.PlaylistMp4, quality: "bestvideo+bestaudio/best", isPlaylist: true);
+            cboQuality.Items.Clear();
+            cboQuality.Items.AddRange(new object[] { "best", "1080p", "720p", "480p", "360p" });
+            cboQuality.SelectedIndex = 0;
         }
 
         private void btnPasta_Click(object sender, EventArgs e)
@@ -74,12 +60,37 @@ namespace VideosYITDownloaderCsharp
             }
         }
 
-        private async Task StartDownload(DownloadFormat format, string quality, bool isPlaylist)
+        private async void btnVideo_Click(object sender, EventArgs e)
         {
-            var url = textBox1.Text.Trim();
-            if (string.IsNullOrWhiteSpace(url))
+            await StartQueue(DownloadFormat.VideoOnlyMp4);
+        }
+
+        private async void btnAudio_Click(object sender, EventArgs e)
+        {
+            await StartQueue(DownloadFormat.Mp3);
+        }
+
+        private async void btnVideoAudio_Click(object sender, EventArgs e)
+        {
+            await StartQueue(DownloadFormat.Mp4Full);
+        }
+
+        private async void btnPlayList_Click(object sender, EventArgs e)
+        {
+            await StartQueue(DownloadFormat.PlaylistMp4);
+        }
+
+        private void btnClearLog_Click(object sender, EventArgs e)
+        {
+            listLog.Items.Clear();
+        }
+
+        private async Task StartQueue(DownloadFormat format)
+        {
+            var urls = ParseUrls();
+            if (urls.Count == 0)
             {
-                MessageBox.Show("Informe a URL.");
+                MessageBox.Show("Informe pelo menos uma URL (uma por linha).");
                 return;
             }
 
@@ -94,6 +105,40 @@ namespace VideosYITDownloaderCsharp
             _cts?.Cancel();
             _cts = new CancellationTokenSource();
 
+            btnToggle(false);
+            progressBar1.Value = 0;
+            lblProgress.Text = "0%";
+
+            var quality = cboQuality.SelectedItem?.ToString() ?? "best";
+            int success = 0, fail = 0;
+            string lastError = null;
+
+            foreach (var url in urls)
+            {
+                AppendLog($"Iniciando: {url}");
+                var (ok, err) = await StartDownload(format, quality, url, targetDir);
+                if (ok) success++;
+                else
+                {
+                    fail++;
+                    if (!string.IsNullOrWhiteSpace(err))
+                        lastError = err;
+                }
+
+                if (_cts.IsCancellationRequested) break;
+            }
+
+            btnToggle(true);
+
+            var resumo = $"Fila concluída.\nSucesso: {success}\nFalha: {fail}";
+            if (fail > 0 && !string.IsNullOrWhiteSpace(lastError))
+                resumo += $"\nÚltimo erro: {lastError}";
+            MessageBox.Show(resumo, "Resumo");
+            AppendLog(resumo);
+        }
+
+        private async Task<(bool ok, string error)> StartDownload(DownloadFormat format, string quality, string url, string targetDir)
+        {
             progressBar1.Value = 0;
             lblProgress.Text = "0%";
 
@@ -104,6 +149,8 @@ namespace VideosYITDownloaderCsharp
                 OutputDirectory = targetDir,
                 Quality = quality
             };
+
+            string lastError = null;
 
             var progress = new Progress<DownloadProgressInfo>(info =>
             {
@@ -119,22 +166,35 @@ namespace VideosYITDownloaderCsharp
                 }
             });
 
-            btnToggle(false);
             var result = await _ytDlp.DownloadAsync(request, progress, _cts.Token);
-            btnToggle(true);
 
             if (result.Success)
             {
                 AppendLog("Download concluído.");
-                MessageBox.Show("Download concluído.");
+                return (true, null);
             }
             else
             {
+                lastError = result.Message;
                 AppendLog("Falhou: " + result.Message);
                 if (!string.IsNullOrWhiteSpace(result.StdErr))
+                {
                     AppendLog("stderr: " + result.StdErr);
-                MessageBox.Show("Falhou: " + result.Message);
+                    // Se o stderr tiver mensagem mais clara, usamos no resumo
+                    lastError = result.StdErr;
+                }
+                return (false, lastError);
             }
+        }
+
+        private List<string> ParseUrls()
+        {
+            return textBox1.Text
+                .Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(u => u.Trim())
+                .Where(u => !string.IsNullOrWhiteSpace(u))
+                .Distinct()
+                .ToList();
         }
 
         private void btnToggle(bool enabled)
@@ -144,6 +204,7 @@ namespace VideosYITDownloaderCsharp
             btnAudio.Enabled = enabled;
             btnPlayList.Enabled = enabled;
             btnPasta.Enabled = enabled;
+            btnClearLog.Enabled = enabled;
         }
 
         private void AppendLog(string message)

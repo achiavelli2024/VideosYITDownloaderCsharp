@@ -148,7 +148,8 @@ namespace VideosYITDownloaderCsharp.Licensing
             var info = Current ?? Load();
             if (info == null)
             {
-                reason = "Licença ou trial não encontrados.";
+                var key = HardwareIdProvider.GetKeyCode();
+                reason = $"Licença ou trial não encontrados. Keycode: {key} | Contato: Cel 11 942963117 / email: alexandrechiavelli@gmail.com";
                 return false;
             }
 
@@ -157,7 +158,8 @@ namespace VideosYITDownloaderCsharp.Licensing
 
             if (!info.IsTrialActive(out _))
             {
-                reason = "Trial expirado.";
+                var key = HardwareIdProvider.GetKeyCode();
+                reason = $"Trial expirado. Adquira a licença PRO. Keycode: {key} | Contato: Cel 11 942963117 / email: alexandrechiavelli@gmail.com";
                 return false;
             }
 
@@ -167,7 +169,10 @@ namespace VideosYITDownloaderCsharp.Licensing
                 if (elapsed.TotalHours < 24)
                 {
                     var remaining = TimeSpan.FromHours(24) - elapsed;
-                    reason = $"Trial: aguarde {remaining.Hours}h {remaining.Minutes}m para novo download.";
+                    var key = HardwareIdProvider.GetKeyCode();
+                    reason =
+                        $"Trial: limite de 1 download a cada 24h. Aguarde {remaining.Hours}h {remaining.Minutes}m. " +
+                        $"Para remover o limite, adquira a licença PRO. Keycode: {key} | Contato: Cel 11 942963117 / email: alexandrechiavelli@gmail.com";
                     return false;
                 }
             }
