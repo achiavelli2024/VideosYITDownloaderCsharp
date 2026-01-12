@@ -2,15 +2,8 @@
 {
     partial class frmMain
     {
-        /// <summary>
-        /// Required designer variable.
-        /// </summary>
         private System.ComponentModel.IContainer components = null;
 
-        /// <summary>
-        /// Clean up any resources being used.
-        /// </summary>
-        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))
@@ -22,10 +15,6 @@
 
         #region Windows Form Designer generated code
 
-        /// <summary>
-        /// Required method for Designer support - do not modify
-        /// the contents of this method with the code editor.
-        /// </summary>
         private void InitializeComponent()
         {
             this.label1 = new System.Windows.Forms.Label();
@@ -36,6 +25,7 @@
             this.btnVideoAudio = new System.Windows.Forms.Button();
             this.btnPlayList = new System.Windows.Forms.Button();
             this.listLog = new System.Windows.Forms.ListBox();
+            this.lblLicenseStatus = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // label1
@@ -107,11 +97,22 @@
             this.listLog.Size = new System.Drawing.Size(686, 238);
             this.listLog.TabIndex = 7;
             // 
+            // lblLicenseStatus
+            // 
+            this.lblLicenseStatus.AutoSize = true;
+            this.lblLicenseStatus.ForeColor = System.Drawing.Color.MediumBlue;
+            this.lblLicenseStatus.Location = new System.Drawing.Point(33, 9);
+            this.lblLicenseStatus.Name = "lblLicenseStatus";
+            this.lblLicenseStatus.Size = new System.Drawing.Size(106, 13);
+            this.lblLicenseStatus.TabIndex = 8;
+            this.lblLicenseStatus.Text = "Licença: (carregando)";
+            // 
             // frmMain
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(744, 450);
+            this.Controls.Add(this.lblLicenseStatus);
             this.Controls.Add(this.listLog);
             this.Controls.Add(this.btnPlayList);
             this.Controls.Add(this.btnVideoAudio);
@@ -123,6 +124,7 @@
             this.Name = "frmMain";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "VideosYITDownloader";
+            this.Load += new System.EventHandler(this.frmMain_Load);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -138,6 +140,6 @@
         private System.Windows.Forms.Button btnVideoAudio;
         private System.Windows.Forms.Button btnPlayList;
         private System.Windows.Forms.ListBox listLog;
+        private System.Windows.Forms.Label lblLicenseStatus;
     }
 }
-
