@@ -9,6 +9,7 @@
             if (disposing && (components != null))
             {
                 components.Dispose();
+                _cts?.Dispose();
             }
             base.Dispose(disposing);
         }
@@ -26,6 +27,10 @@
             this.btnPlayList = new System.Windows.Forms.Button();
             this.listLog = new System.Windows.Forms.ListBox();
             this.lblLicenseStatus = new System.Windows.Forms.Label();
+            this.progressBar1 = new System.Windows.Forms.ProgressBar();
+            this.lblProgress = new System.Windows.Forms.Label();
+            this.label2 = new System.Windows.Forms.Label();
+            this.txtOutputFolder = new System.Windows.Forms.TextBox();
             this.SuspendLayout();
             // 
             // label1
@@ -52,6 +57,7 @@
             this.btnPasta.TabIndex = 2;
             this.btnPasta.Text = "Selecionar Pasta";
             this.btnPasta.UseVisualStyleBackColor = true;
+            this.btnPasta.Click += new System.EventHandler(this.btnPasta_Click);
             // 
             // btnVideo
             // 
@@ -61,6 +67,7 @@
             this.btnVideo.TabIndex = 3;
             this.btnVideo.Text = "Video";
             this.btnVideo.UseVisualStyleBackColor = true;
+            this.btnVideo.Click += new System.EventHandler(this.btnVideo_Click);
             // 
             // btnAudio
             // 
@@ -70,6 +77,7 @@
             this.btnAudio.TabIndex = 4;
             this.btnAudio.Text = "Audio";
             this.btnAudio.UseVisualStyleBackColor = true;
+            this.btnAudio.Click += new System.EventHandler(this.btnAudio_Click);
             // 
             // btnVideoAudio
             // 
@@ -79,6 +87,7 @@
             this.btnVideoAudio.TabIndex = 5;
             this.btnVideoAudio.Text = "Video + Audio";
             this.btnVideoAudio.UseVisualStyleBackColor = true;
+            this.btnVideoAudio.Click += new System.EventHandler(this.btnVideoAudio_Click);
             // 
             // btnPlayList
             // 
@@ -88,13 +97,14 @@
             this.btnPlayList.TabIndex = 6;
             this.btnPlayList.Text = "PlayList";
             this.btnPlayList.UseVisualStyleBackColor = true;
+            this.btnPlayList.Click += new System.EventHandler(this.btnPlayList_Click);
             // 
             // listLog
             // 
             this.listLog.FormattingEnabled = true;
-            this.listLog.Location = new System.Drawing.Point(36, 198);
+            this.listLog.Location = new System.Drawing.Point(36, 228);
             this.listLog.Name = "listLog";
-            this.listLog.Size = new System.Drawing.Size(686, 238);
+            this.listLog.Size = new System.Drawing.Size(686, 212);
             this.listLog.TabIndex = 7;
             // 
             // lblLicenseStatus
@@ -107,11 +117,47 @@
             this.lblLicenseStatus.TabIndex = 8;
             this.lblLicenseStatus.Text = "Licença: (carregando)";
             // 
+            // progressBar1
+            // 
+            this.progressBar1.Location = new System.Drawing.Point(36, 192);
+            this.progressBar1.Name = "progressBar1";
+            this.progressBar1.Size = new System.Drawing.Size(600, 23);
+            this.progressBar1.TabIndex = 9;
+            // 
+            // lblProgress
+            // 
+            this.lblProgress.AutoSize = true;
+            this.lblProgress.Location = new System.Drawing.Point(642, 198);
+            this.lblProgress.Name = "lblProgress";
+            this.lblProgress.Size = new System.Drawing.Size(21, 13);
+            this.lblProgress.TabIndex = 10;
+            this.lblProgress.Text = "0%";
+            // 
+            // label2
+            // 
+            this.label2.AutoSize = true;
+            this.label2.Location = new System.Drawing.Point(33, 85);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(89, 13);
+            this.label2.TabIndex = 11;
+            this.label2.Text = "Pasta de destino";
+            // 
+            // txtOutputFolder
+            // 
+            this.txtOutputFolder.Location = new System.Drawing.Point(124, 82);
+            this.txtOutputFolder.Name = "txtOutputFolder";
+            this.txtOutputFolder.Size = new System.Drawing.Size(425, 20);
+            this.txtOutputFolder.TabIndex = 12;
+            // 
             // frmMain
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(744, 450);
+            this.ClientSize = new System.Drawing.Size(744, 460);
+            this.Controls.Add(this.txtOutputFolder);
+            this.Controls.Add(this.label2);
+            this.Controls.Add(this.lblProgress);
+            this.Controls.Add(this.progressBar1);
             this.Controls.Add(this.lblLicenseStatus);
             this.Controls.Add(this.listLog);
             this.Controls.Add(this.btnPlayList);
@@ -141,5 +187,9 @@
         private System.Windows.Forms.Button btnPlayList;
         private System.Windows.Forms.ListBox listLog;
         private System.Windows.Forms.Label lblLicenseStatus;
+        private System.Windows.Forms.ProgressBar progressBar1;
+        private System.Windows.Forms.Label lblProgress;
+        private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.TextBox txtOutputFolder;
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Windows.Forms;
 using VideosYITDownloaderCsharp.Licensing;
+using VideosYITDownloaderCsharp.Utils;
 
 namespace VideosYITDownloaderCsharp
 {
@@ -18,7 +19,8 @@ namespace VideosYITDownloaderCsharp
                 return;
             }
 
-            Application.Run(new frmMain(license));
+            var logger = new FileLogger();
+            Application.Run(new frmMain(license, logger));
         }
     }
 }

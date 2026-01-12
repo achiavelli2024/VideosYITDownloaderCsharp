@@ -44,20 +44,32 @@
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
+	
+	<Content Include="Tools\**\*.*">
+    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	</Content>
+	
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Licensing\HardwareIdProvider.cs" />
+    <Compile Include="Licensing\LicenseForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Licensing\LicenseForm.Designer.cs">
+      <DependentUpon>LicenseForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Licensing\LicenseInfo.cs" />
+    <Compile Include="Licensing\LicenseManager.cs" />
+    <Compile Include="Services\ProcessRunner.cs" />
+    <Compile Include="Services\YtDlpService.cs" />
+    <Compile Include="Utils\FileLogger.cs" />
+    <Compile Include="Utils\ILogger.cs" />
     <Compile Include="frmMain.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="frmMain.Designer.cs">
       <DependentUpon>frmMain.cs</DependentUpon>
     </Compile>
-    <Compile Include="LicenseForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Licensing\HardwareIdProvider.cs" />
-    <Compile Include="Licensing\LicenseInfo.cs" />
-    <Compile Include="Licensing\LicenseManager.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="frmMain.resx">
