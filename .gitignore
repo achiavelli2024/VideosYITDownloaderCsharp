@@ -40,6 +40,14 @@ bin/
 obj/
 Debug/
 Release/
+Tools/
+
+VideosYITDownloaderCsharp/VideosYITDownloaderCsharp/Tools/*.exe
+VideosYITDownloaderCsharp/VideosYITDownloaderCsharp/Tools/*.dll
+VideosYITDownloaderCsharp/VideosYITDownloaderCsharp/Tools/*.zip
+VideosYITDownloaderCsharp/VideosYITDownloaderCsharp/Tools/*.7z
+
+
 
 
 
